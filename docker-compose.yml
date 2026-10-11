@@ -1,0 +1,159 @@
+name: messengo
+
+services:
+  # 1. MongoDB (Database-per-Service)
+  mongodb:
+    image: mongo:7.0
+    container_name: messengo-mongodb
+    restart: unless-stopped
+    ports:
+      - "${MONGO_PORT:-27017}:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USER}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD}
+    volumes:
+      - mongo_data:/data/db
+      - ./docker/mongo/init-mongo.js:/docker-entrypoint-initdb.d/init-mongo.js:ro
+    networks:
+      - messengo-net
+    healthcheck:
+      test: [ "CMD", "mongosh", "--eval", "db.adminCommand('ping')" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # 2. Redis (Streams, Pub/Sub, In-memory Cache)
+  redis:
+    image: redis:7-alpine
+    container_name: messengo-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - messengo-net
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # 3. MinIO (S3-compatible Object Storage for Media & Backup)
+  minio:
+    image: cgr.dev/chainguard/minio:latest
+    container_name: messengo-minio
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    ports:
+      - "${MINIO_PORT:-9000}:9000"
+      - "${MINIO_CONSOLE_PORT:-9001}:9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+    volumes:
+      - minio_data:/data
+    networks:
+      - messengo-net
+
+  # 3.1 Helper to initialize MinIO Buckets
+  minio-init:
+    image: amazon/aws-cli:latest
+    container_name: messengo-minio-init
+    depends_on:
+      minio:
+        condition: service_started
+    environment:
+      AWS_ACCESS_KEY_ID: ${MINIO_ROOT_USER}
+      AWS_SECRET_ACCESS_KEY: ${MINIO_ROOT_PASSWORD}
+      AWS_DEFAULT_REGION: us-east-1
+      MINIO_PORT: ${MINIO_PORT:-9000}
+      MINIO_MEDIA_BUCKET: ${MINIO_MEDIA_BUCKET}
+      MINIO_BACKUP_BUCKET: ${MINIO_BACKUP_BUCKET}
+    entrypoint: /bin/sh
+    command: >
+      -c " until aws --endpoint-url=http://minio:9000 s3 ls > /dev/null 2>&1; do
+        echo 'Waiting for MinIO S3 API...';
+        sleep 2;
+      done; aws --endpoint-url=http://minio:9000 s3 mb s3://$${MINIO_MEDIA_BUCKET} 2>/dev/null || true; aws --endpoint-url=http://minio:9000 s3 mb s3://$${MINIO_BACKUP_BUCKET} 2>/dev/null || true; echo 'MinIO S3 buckets initialized successfully.'; exit 0; "
+    networks:
+      - messengo-net
+
+  # 4. Coturn (STUN/TURN WebRTC Media Relay)
+  coturn:
+    image: coturn/coturn:latest
+    container_name: messengo-coturn
+    restart: unless-stopped
+    command:
+      - "-n"
+      - "--log-file=stdout"
+      - "--listening-port=3478"
+      - "--tls-listening-port=5349"
+      - "--min-port=49152"
+      - "--max-port=49200"
+      - "--realm=${COTURN_REALM}"
+      - "--user=${COTURN_USER}:${COTURN_SECRET}"
+      - "--lt-cred-mech"
+      - "--fingerprint"
+      - "--verbose"
+    ports:
+      - "${COTURN_PORT:-3478}:3478/tcp"
+      - "${COTURN_PORT:-3478}:3478/udp"
+      - "${COTURN_TLS_PORT:-5349}:5349/tcp"
+      - "${COTURN_TLS_PORT:-5349}:5349/udp"
+      - "${COTURN_MIN_PORT:-49152}-${COTURN_MAX_PORT:-49200}:49152-49200/udp"
+    networks:
+      - messengo-net
+
+  # 5. MailHog (Mock OTP / Email Verification for local testing)
+  mailhog:
+    image: mailhog/mailhog:latest
+    container_name: messengo-mailhog
+    restart: unless-stopped
+    ports:
+      - "${MAILHOG_SMTP_PORT:-1025}:1025"
+      - "${MAILHOG_WEB_PORT:-8025}:8025"
+    networks:
+      - messengo-net
+
+  # 6. Nginx API Gateway & Reverse Proxy
+  gateway:
+    image: nginx:1.25-alpine
+    container_name: messengo-gateway
+    restart: unless-stopped
+    ports:
+      - "${GATEWAY_PORT:-80}:80"
+    environment:
+      AUTH_SERVICE_PORT: ${AUTH_SERVICE_PORT:-3001}
+      USER_SERVICE_PORT: ${USER_SERVICE_PORT:-3002}
+      CHAT_SERVICE_PORT: ${CHAT_SERVICE_PORT:-3003}
+      MESSAGE_SERVICE_PORT: ${MESSAGE_SERVICE_PORT:-3004}
+      MEDIA_SERVICE_PORT: ${MEDIA_SERVICE_PORT:-3005}
+      CALL_SERVICE_PORT: ${CALL_SERVICE_PORT:-3006}
+      UTILITY_SERVICE_PORT: ${UTILITY_SERVICE_PORT:-3007}
+      SEARCH_SERVICE_PORT: ${SEARCH_SERVICE_PORT:-3008}
+      MINIO_PORT: ${MINIO_PORT:-9000}
+    volumes:
+      - ./docker/nginx/default.conf.template:/etc/nginx/templates/default.conf.template:ro
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_started
+    networks:
+      - messengo-net
+
+volumes:
+  mongo_data:
+    driver: local
+  redis_data:
+    driver: local
+  minio_data:
+    driver: local
+
+networks:
+  messengo-net:
+    driver: bridge
