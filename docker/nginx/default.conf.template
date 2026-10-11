@@ -1,0 +1,118 @@
+# WebSocket connection upgrade mapping
+map $http_upgrade $connection_upgrade {
+    default upgrade;
+    ''      close;
+}
+
+server {
+    listen 80;
+    server_name localhost;
+
+    client_max_body_size 50M;
+
+    # Docker internal DNS resolver for dynamic upstream resolution
+    resolver 127.0.0.11 valid=30s ipv6=off;
+
+    # Health check
+    location /health {
+        default_type application/json;
+        return 200 '{"status":"ok","gateway":"MessenGO API Gateway"}';
+    }
+
+    # Auth Service
+    location /api/v1/auth/ {
+        set $auth_backend "http://auth-service:${AUTH_SERVICE_PORT}";
+        proxy_pass $auth_backend;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    # User & Identity Service
+    location /api/v1/users/ {
+        set $user_backend "http://user-service:${USER_SERVICE_PORT}";
+        proxy_pass $user_backend;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    # Chat / Conversation Service (HTTP)
+    location /api/v1/chats/ {
+        set $chat_backend "http://chat-service:${CHAT_SERVICE_PORT}";
+        proxy_pass $chat_backend;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    # Message Service (WebSocket endpoint for Real-time chat)
+    location /ws/messages {
+        set $msg_backend "http://message-service:${MESSAGE_SERVICE_PORT}";
+        proxy_pass $msg_backend;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection $connection_upgrade;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_read_timeout 86400s;
+        proxy_send_timeout 86400s;
+    }
+
+    # Call Service (WebSocket endpoint for WebRTC Signaling)
+    location /ws/calls {
+        set $call_backend "http://call-service:${CALL_SERVICE_PORT}";
+        proxy_pass $call_backend;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection $connection_upgrade;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_read_timeout 86400s;
+        proxy_send_timeout 86400s;
+    }
+
+    # Media Service
+    location /api/v1/media/ {
+        set $media_backend "http://media-service:${MEDIA_SERVICE_PORT}";
+        proxy_pass $media_backend;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    # Utility Service (Backup / Cloud Storage)
+    location /api/v1/utility/ {
+        set $utility_backend "http://utility-service:${UTILITY_SERVICE_PORT}";
+        proxy_pass $utility_backend;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    # Search Service
+    location /api/v1/search/ {
+        set $search_backend "http://search-service:${SEARCH_SERVICE_PORT}";
+        proxy_pass $search_backend;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    # MinIO S3 Direct Gateway
+    location /storage/ {
+        set $minio_backend "http://minio:${MINIO_PORT}";
+        proxy_pass $minio_backend/;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    }
+}
