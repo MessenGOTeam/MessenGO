@@ -1,0 +1,60 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="120dp"
+    android:height="120dp"
+    android:viewportWidth="120"
+    android:viewportHeight="120">
+
+    <!-- Outer glowing soft shadow/halo -->
+    <path
+        android:pathData="M60,10 C87.61,10 110,32.39 110,60 C110,87.61 87.61,110 60,110 C32.39,110 10,87.61 10,60 C10,32.39 32.39,10 60,10 Z"
+        android:fillAlpha="0.12">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:startX="10"
+                android:startY="10"
+                android:endX="110"
+                android:endY="110"
+                android:type="linear">
+                <item android:offset="0" android:color="#FF2563EB" />
+                <item android:offset="1" android:color="#FF06B6D4" />
+            </gradient>
+        </aapt:attr>
+    </path>
+
+    <!-- Main Chat Bubble Body -->
+    <path
+        android:pathData="M60,18 C37.91,18 20,34.56 20,55 C20,66.2 25.32,76.12 33.74,82.83 C33.15,87.41 30.82,93.42 26.68,97.77 C26.11,98.37 26.47,99.35 27.29,99.45 C34.39,100.27 42.15,97.23 46.94,92.83 C51.05,94.24 55.43,95 60,95 C82.09,95 100,78.44 100,55 C100,34.56 82.09,18 60,18 Z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:startX="20"
+                android:startY="18"
+                android:endX="100"
+                android:endY="95"
+                android:type="linear">
+                <item android:offset="0" android:color="#FF3B82F6" />
+                <item android:offset="0.5" android:color="#FF2563EB" />
+                <item android:offset="1" android:color="#FF1D4ED8" />
+            </gradient>
+        </aapt:attr>
+    </path>
+
+    <!-- Secondary Accent Bubble (Behind / Overlapping highlight) -->
+    <path
+        android:pathData="M78,40 C85,45 88,52 87,58 C86,52 82,46 76,43 C73,41.5 68,41 62,41 C67,39 73,38 78,40 Z"
+        android:fillColor="#55FFFFFF" />
+
+    <!-- Stylized "GO" Forward Arrow & Chat Spark -->
+    <path
+        android:pathData="M48,43 L68,55 L48,67 Z"
+        android:fillColor="#FFFFFFFF" />
+    <path
+        android:pathData="M66,49 L76,55 L66,61 Z"
+        android:fillAlpha="0.85"
+        android:fillColor="#FFFFFFFF" />
+
+    <!-- Cute Sparkle Star -->
+    <path
+        android:pathData="M83,28 C83,32 86,34 90,34 C86,34 83,36 83,40 C83,36 80,34 76,34 C80,34 83,32 83,28 Z"
+        android:fillColor="#FFFBBF24" />
+</vector>
