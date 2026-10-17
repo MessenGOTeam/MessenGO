@@ -1,0 +1,24 @@
+<resources>
+    <string name="app_name">MessenGO</string>
+    <string name="app_tagline">Kết nối yêu thương, trò chuyện không khoảng cách</string>
+
+    <!-- Login Screen -->
+    <string name="login_welcome_title">Xin chào! 👋</string>
+    <string name="login_welcome_subtitle">Nhập số điện thoại để bắt đầu kết nối cùng bạn bè và người thân</string>
+    <string name="login_phone_label">Số điện thoại</string>
+    <string name="login_phone_placeholder">0912 345 678</string>
+    <string name="login_btn_continue">Tiếp tục</string>
+    <string name="login_security_note">Mã hóa đầu cuối &amp; Bảo mật tuyệt đối</string>
+    <string name="login_terms_agreement">Bằng việc tiếp tục, bạn đồng ý với Điều khoản dịch vụ và Chính sách bảo mật của MessenGO.</string>
+    <string name="login_error_invalid_phone">Số điện thoại không hợp lệ. Vui lòng nhập đúng 10 chữ số.</string>
+
+    <!-- OTP Screen -->
+    <string name="otp_title">Xác thực OTP 🔐</string>
+    <string name="otp_description">Mã xác thực gồm 6 chữ số đã được gửi đến số điện thoại</string>
+    <string name="otp_edit_phone">Đổi số khác</string>
+    <string name="otp_btn_verify">Xác thực &amp; Bắt đầu</string>
+    <string name="otp_resend_countdown">Gửi lại mã sau %1$ds</string>
+    <string name="otp_resend_action">Gửi lại mã OTP</string>
+    <string name="otp_error_empty">Vui lòng nhập đủ 6 chữ số OTP</string>
+    <string name="otp_error_invalid">Mã xác thực OTP không chính xác hoặc đã hết hạn</string>
+</resources>

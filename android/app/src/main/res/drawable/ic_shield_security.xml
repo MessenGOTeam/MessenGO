@@ -1,0 +1,50 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="96dp"
+    android:height="96dp"
+    android:viewportWidth="96"
+    android:viewportHeight="96">
+
+    <!-- Soft outer glow background circle -->
+    <path
+        android:pathData="M48,8 C70.09,8 88,25.91 88,48 C88,70.09 70.09,88 48,88 C25.91,88 8,70.09 8,48 C8,25.91 25.91,8 48,8 Z"
+        android:fillAlpha="0.12">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:startX="8"
+                android:startY="8"
+                android:endX="88"
+                android:endY="88"
+                android:type="linear">
+                <item android:offset="0" android:color="#FF10B981" />
+                <item android:offset="1" android:color="#FF2563EB" />
+            </gradient>
+        </aapt:attr>
+    </path>
+
+    <!-- Shield Base -->
+    <path
+        android:pathData="M48,20 C32,20 28,24 28,24 L28,48 C28,62.8 36.8,76.4 48,80 C59.2,76.4 68,62.8 68,48 L68,24 C68,24 64,20 48,20 Z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:startX="28"
+                android:startY="20"
+                android:endX="68"
+                android:endY="80"
+                android:type="linear">
+                <item android:offset="0" android:color="#FF3B82F6" />
+                <item android:offset="1" android:color="#FF10B981" />
+            </gradient>
+        </aapt:attr>
+    </path>
+
+    <!-- Shield Inner Highlight -->
+    <path
+        android:pathData="M48,26 C35.5,26 33,29.2 33,29.2 L33,48 C33,60 40,70.8 48,74.2 C48,74.2 48,26 48,26 Z"
+        android:fillColor="#22FFFFFF" />
+
+    <!-- Center Checkmark -->
+    <path
+        android:pathData="M42,54.5 L36.5,49 C35.72,48.22 34.46,48.22 33.68,49 C32.9,49.78 32.9,51.04 33.68,51.82 L40.59,58.73 C41.37,59.51 42.63,59.51 43.41,58.73 L62.32,39.82 C63.1,39.04 63.1,37.78 62.32,37 C61.54,36.22 60.28,36.22 59.5,37 L42,54.5 Z"
+        android:fillColor="#FFFFFFFF" />
+</vector>
