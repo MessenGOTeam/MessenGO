@@ -133,6 +133,7 @@ services:
       CALL_SERVICE_PORT: ${CALL_SERVICE_PORT:-3006}
       UTILITY_SERVICE_PORT: ${UTILITY_SERVICE_PORT:-3007}
       SEARCH_SERVICE_PORT: ${SEARCH_SERVICE_PORT:-3008}
+      NOTIFICATION_SERVICE_PORT: ${NOTIFICATION_SERVICE_PORT:-3009}
       MINIO_PORT: ${MINIO_PORT:-9000}
     volumes:
       - ./docker/nginx/default.conf.template:/etc/nginx/templates/default.conf.template:ro
