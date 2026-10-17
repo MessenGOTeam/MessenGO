@@ -1,0 +1,15 @@
+{
+  "name": "messengo-backend",
+  "version": "1.0.0",
+  "private": true,
+  "description": "MessenGO Node.js Microservices Monorepo - Sprint 1",
+  "workspaces": [
+    "shared",
+    "services/*"
+  ],
+  "scripts": {
+    "dev:auth": "cd services/auth-service && npm run dev",
+    "dev:user": "cd services/user-service && npm run dev",
+    "test": "node tests/sprint1_auth_user.test.js"
+  }
+}
