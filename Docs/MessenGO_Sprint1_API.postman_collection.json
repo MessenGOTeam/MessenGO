@@ -1,0 +1,238 @@
+{
+  "info": {
+    "name": "MessenGO - Sprint 1 Backend APIs (Member A)",
+    "_postman_id": "b9574771-sprint1-messengo-api",
+    "description": "Postman API Collection for MessenGO Sprint 1 (Auth Service & User Service) per IEEE 830 SRS MSG-SRS-001 v1.1",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:80",
+      "type": "string"
+    },
+    {
+      "key": "accessToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "refreshToken",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Gateway Health Check",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/health",
+          "host": ["{{baseUrl}}"],
+          "path": ["health"]
+        }
+      }
+    },
+    {
+      "name": "Auth Service",
+      "item": [
+        {
+          "name": "1. Request OTP (FR-AUTH-01)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"phone\": \"+84912345678\",\n  \"email\": \"user@example.com\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/otp/request",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "auth", "otp", "request"]
+            }
+          }
+        },
+        {
+          "name": "2. Verify OTP & Authenticate (FR-AUTH-03, Seq1)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json.success && json.data) {",
+                  "  pm.collectionVariables.set('accessToken', json.data.accessToken);",
+                  "  pm.collectionVariables.set('refreshToken', json.data.refreshToken);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"phone\": \"+84912345678\",\n  \"otp\": \"123456\",\n  \"deviceId\": \"device_android_test_uuid\",\n  \"deviceName\": \"Google Pixel 7\",\n  \"fcmToken\": \"mock_fcm_token_xyz123\",\n  \"appVersion\": \"1.0.0\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/otp/verify",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "auth", "otp", "verify"]
+            }
+          }
+        },
+        {
+          "name": "3. Refresh Access Token (FR-AUTH-07)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"{{refreshToken}}\",\n  \"deviceId\": \"device_android_test_uuid\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/token/refresh",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "auth", "token", "refresh"]
+            }
+          }
+        },
+        {
+          "name": "4. Logout (FR-AUTH-06)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/logout",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "auth", "logout"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "User & Profile Service",
+      "item": [
+        {
+          "name": "1. Get My Profile",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/users/me",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "users", "me"]
+            }
+          }
+        },
+        {
+          "name": "2. Update Profile (FR-AUTH-05)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"displayName\": \"Nguyen Van A\",\n  \"statusText\": \"Hello from MessenGO!\",\n  \"locale\": \"vi\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/users/me",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "users", "me"]
+            }
+          }
+        },
+        {
+          "name": "3. Search User by Phone (FR-CON-01)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/users/search?phone=%2B84912345678",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "users", "search"],
+              "query": [
+                {
+                  "key": "phone",
+                  "value": "+84912345678"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "4. Update Device & FCM Token (FR-AUTH-04)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"deviceId\": \"device_android_test_uuid\",\n  \"deviceName\": \"Google Pixel 7 (Updated)\",\n  \"fcmToken\": \"new_refreshed_fcm_token\",\n  \"appVersion\": \"1.0.1\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/users/device",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "users", "device"]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

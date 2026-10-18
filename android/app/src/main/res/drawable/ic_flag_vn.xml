@@ -1,0 +1,14 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="18dp"
+    android:viewportWidth="30"
+    android:viewportHeight="20">
+    <!-- Red flag background with slight rounded visual bounds handled by container -->
+    <path
+        android:pathData="M0,0h30v20h-30z"
+        android:fillColor="#FFDA251D" />
+    <!-- Yellow Five-Pointed Star -->
+    <path
+        android:pathData="M15,4 L16.85,9.71 L22.86,9.71 L18.00,13.24 L19.86,18.94 L15,15.41 L10.14,18.94 L12.00,13.24 L7.14,9.71 L13.15,9.71 Z"
+        android:fillColor="#FFFFFF00" />
+</vector>
