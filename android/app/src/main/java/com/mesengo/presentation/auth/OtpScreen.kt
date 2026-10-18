@@ -75,7 +75,7 @@ fun OtpScreen(
 ) {
     val verifyState = viewModel.otpVerifyState
     var otpInput by rememberSaveable { mutableStateOf("") }
-    var countdown by rememberSaveable { mutableIntStateOf(60) }
+    var countdown by rememberSaveable { mutableIntStateOf(180) }
     var isTimerActive by rememberSaveable { mutableStateOf(true) }
 
     val focusRequester = remember { FocusRequester() }
@@ -309,8 +309,11 @@ fun OtpScreen(
                                 modifier = Modifier.fillMaxWidth()
                             ) {
                                 if (isTimerActive && countdown > 0) {
+                                    val minutes = countdown / 60
+                                    val seconds = countdown % 60
+                                    val timeDisplay = String.format("%d:%02d", minutes, seconds)
                                     Text(
-                                        text = "Chờ gửi lại mã sau ${countdown}s nha ⏱️",
+                                        text = "Chờ gửi lại mã sau ${timeDisplay} nha ⏱️",
                                         style = MaterialTheme.typography.bodyMedium,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
@@ -320,7 +323,7 @@ fun OtpScreen(
                                             .clip(RoundedCornerShape(12.dp))
                                             .clickable {
                                                 viewModel.requestOtp(phone)
-                                                countdown = 60
+                                                countdown = 180
                                                 isTimerActive = true
                                                 otpInput = ""
                                                 viewModel.resetOtpVerifyState()
