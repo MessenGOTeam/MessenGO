@@ -92,14 +92,17 @@ class MessageWebSocketClient @Inject constructor(
         if (!isConnected || webSocket == null) return false
 
         return try {
-            val payload = JSONObject().apply {
-                put("type", "send_message")
+            val dataObj = JSONObject().apply {
                 put("clientMsgId", clientMsgId)
+                put("convId", conversationId)
                 put("conversationId", conversationId)
                 put("senderId", senderId)
                 put("content", content)
-                put("messageType", "text")
-                put("timestamp", System.currentTimeMillis())
+                put("type", "text")
+            }
+            val payload = JSONObject().apply {
+                put("event", "msg.send")
+                put("data", dataObj)
             }
             webSocket?.send(payload.toString()) == true
         } catch (e: Exception) {
@@ -112,10 +115,33 @@ class MessageWebSocketClient @Inject constructor(
         if (!isConnected || webSocket == null) return false
 
         return try {
+            val dataObj = JSONObject().apply {
+                put("convId", conversationId)
+                put("conversationId", conversationId)
+                put("lastReadSeq", seq)
+            }
             val payload = JSONObject().apply {
-                put("type", "msg.read")
+                put("event", "msg.read_receipt")
+                put("data", dataObj)
+            }
+            webSocket?.send(payload.toString()) == true
+        } catch (e: Exception) {
+            false
+        }
+    }
+
+    fun sendDeliveredAck(conversationId: String, seq: Long): Boolean {
+        if (!isConnected || webSocket == null) return false
+
+        return try {
+            val dataObj = JSONObject().apply {
+                put("convId", conversationId)
                 put("conversationId", conversationId)
                 put("seq", seq)
+            }
+            val payload = JSONObject().apply {
+                put("event", "msg.delivered_ack")
+                put("data", dataObj)
             }
             webSocket?.send(payload.toString()) == true
         } catch (e: Exception) {
@@ -126,40 +152,48 @@ class MessageWebSocketClient @Inject constructor(
     private fun handleIncomingMessage(jsonStr: String) {
         try {
             val json = JSONObject(jsonStr)
-            val type = json.optString("type")
+            val eventName = if (json.has("event")) json.getString("event") else json.optString("type")
+            val data = json.optJSONObject("data") ?: json
 
-            val event: WebSocketEvent? = when (type) {
+            val event: WebSocketEvent? = when (eventName) {
                 "msg.ack", "message.ack" -> {
                     WebSocketEvent.MsgAck(
-                        clientMsgId = json.getString("clientMsgId"),
-                        seq = json.optLong("seq", 0L),
-                        status = json.optString("status", "sent"),
-                        timestamp = json.optLong("timestamp", System.currentTimeMillis())
+                        clientMsgId = data.getString("clientMsgId"),
+                        seq = data.optLong("seq", 0L),
+                        status = data.optString("status", "sent"),
+                        timestamp = data.optLong("timestamp", System.currentTimeMillis())
                     )
                 }
-                "new_message", "message.created" -> {
+                "msg.receive", "new_message", "message.created" -> {
+                    val convId = if (data.has("convId")) data.getString("convId") else data.optString("conversationId", "")
+                    val seq = data.optLong("seq", 0L)
+                    if (seq > 0L && convId.isNotEmpty()) {
+                        sendDeliveredAck(convId, seq)
+                    }
                     WebSocketEvent.NewMessage(
-                        clientMsgId = json.optString("clientMsgId", ""),
-                        conversationId = json.getString("conversationId"),
-                        senderId = json.getString("senderId"),
-                        content = json.getString("content"),
-                        type = json.optString("messageType", "text"),
-                        seq = json.optLong("seq", 0L),
-                        createdAt = json.optLong("createdAt", System.currentTimeMillis())
+                        clientMsgId = data.optString("clientMsgId", ""),
+                        conversationId = convId,
+                        senderId = data.optString("senderId", ""),
+                        content = data.optString("content", ""),
+                        type = data.optString("type", data.optString("messageType", "text")),
+                        seq = seq,
+                        createdAt = data.optLong("createdAt", System.currentTimeMillis())
                     )
                 }
-                "msg.delivered" -> {
+                "msg.status_update", "msg.delivered" -> {
+                    val convId = if (data.has("convId")) data.getString("convId") else data.optString("conversationId", "")
                     WebSocketEvent.MsgDelivered(
-                        clientMsgId = json.getString("clientMsgId"),
-                        conversationId = json.getString("conversationId"),
-                        seq = json.optLong("seq", 0L)
+                        clientMsgId = data.optString("clientMsgId", ""),
+                        conversationId = convId,
+                        seq = data.optLong("seq", 0L)
                     )
                 }
-                "msg.read" -> {
+                "msg.seen", "msg.read_receipt", "msg.read" -> {
+                    val convId = if (data.has("convId")) data.getString("convId") else data.optString("conversationId", "")
                     WebSocketEvent.MsgRead(
-                        conversationId = json.getString("conversationId"),
-                        readerId = json.getString("readerId"),
-                        lastReadSeq = json.optLong("lastReadSeq", 0L)
+                        conversationId = convId,
+                        readerId = data.optString("readerId", ""),
+                        lastReadSeq = data.optLong("lastReadSeq", 0L)
                     )
                 }
                 else -> null

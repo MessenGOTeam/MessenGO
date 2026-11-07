@@ -17,7 +17,8 @@ class MessageHandler {
       return;
     }
 
-    const { event, data } = packet || {};
+    const event = (packet && (packet.event || packet.type)) || null;
+    const data = (packet && packet.data) ? packet.data : (packet || {});
     if (!event) {
       this.sendError(ws, 'MISSING_EVENT', 'Trường event là bắt buộc');
       return;
@@ -25,14 +26,17 @@ class MessageHandler {
 
     switch (event) {
       case 'msg.send':
+      case 'send_message':
         await this.handleMsgSend(ws, data);
         break;
 
       case 'msg.delivered_ack':
+      case 'msg.delivered':
         await this.handleDeliveredAck(ws, data);
         break;
 
       case 'msg.read_receipt':
+      case 'msg.read':
         await this.handleReadReceipt(ws, data);
         break;
 
@@ -55,7 +59,11 @@ class MessageHandler {
    */
   async handleMsgSend(ws, data) {
     const senderId = ws.userId;
-    const { clientMsgId, convId, content, type = 'text', mediaId = null } = data || {};
+    const clientMsgId = data?.clientMsgId;
+    const convId = data?.convId || data?.conversationId;
+    const content = data?.content;
+    const type = data?.type || data?.messageType || 'text';
+    const mediaId = data?.mediaId || null;
 
     if (!clientMsgId || !convId || !content || !content.trim()) {
       this.sendError(ws, 'INVALID_PAYLOAD', 'clientMsgId, convId và content không được để trống');
@@ -225,7 +233,9 @@ class MessageHandler {
    */
   async handleDeliveredAck(ws, data) {
     const recipientId = ws.userId;
-    const { convId, seq, msgId } = data || {};
+    const convId = data?.convId || data?.conversationId;
+    const seq = data?.seq;
+    const msgId = data?.msgId;
 
     if (!convId || seq === undefined) return;
 
@@ -257,7 +267,8 @@ class MessageHandler {
    */
   async handleReadReceipt(ws, data) {
     const readerId = ws.userId;
-    const { convId, lastReadSeq } = data || {};
+    const convId = data?.convId || data?.conversationId;
+    const lastReadSeq = data?.lastReadSeq !== undefined ? data?.lastReadSeq : data?.seq;
 
     if (!convId || lastReadSeq === undefined) return;
 
