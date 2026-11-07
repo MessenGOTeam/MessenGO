@@ -18,7 +18,7 @@ function createWsClient(url, protocols) {
         const parsed = JSON.parse(raw.toString());
         ws.messageQueue.push(parsed);
         ws.emit('packet', parsed);
-      } catch (e) {}
+      } catch (e) { }
     });
     ws.on('open', () => resolve(ws));
     ws.on('error', (err) => reject(err));

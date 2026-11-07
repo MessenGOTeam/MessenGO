@@ -27,3 +27,4 @@ app.get('/api/v1/messages/health', (req, res) => {
 app.use(errorHandler);
 
 module.exports = app;
+

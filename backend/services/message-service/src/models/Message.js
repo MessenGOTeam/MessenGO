@@ -63,3 +63,4 @@ messageSchema.index({ conversationId: 1, seq: 1 }, { unique: true });
 messageSchema.index({ conversationId: 1, clientMsgId: 1 }, { unique: true });
 
 module.exports = mongoose.models.Message || mongoose.model('Message', messageSchema, 'messages');
+
