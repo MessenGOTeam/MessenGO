@@ -91,3 +91,4 @@ conversationSchema.statics.generatePairKey = function (id1, id2) {
 
 module.exports =
   mongoose.models.Conversation || mongoose.model('Conversation', conversationSchema, 'conversations');
+
