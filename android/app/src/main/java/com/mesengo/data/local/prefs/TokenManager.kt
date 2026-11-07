@@ -18,17 +18,25 @@ class TokenManager @Inject constructor(@ApplicationContext context: Context) {
         EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
     )
 
-    fun saveTokens(accessToken: String, refreshToken: String, userId: String) {
-        prefs.edit()
+    fun saveTokens(accessToken: String, refreshToken: String, userId: String, phone: String? = null) {
+        val editor = prefs.edit()
             .putString("access_token", accessToken)
             .putString("refresh_token", refreshToken)
             .putString("user_id", userId)
-            .apply()
+        if (!phone.isNullOrBlank()) {
+            editor.putString("phone", phone)
+        }
+        editor.apply()
+    }
+
+    fun savePhone(phone: String) {
+        prefs.edit().putString("phone", phone).apply()
     }
 
     fun getAccessToken(): String? = prefs.getString("access_token", null)
     fun getRefreshToken(): String? = prefs.getString("refresh_token", null)
     fun getUserId(): String? = prefs.getString("user_id", null)
+    fun getPhone(): String? = prefs.getString("phone", null)
     fun isLoggedIn(): Boolean = getAccessToken() != null
 
     fun clearTokens() {

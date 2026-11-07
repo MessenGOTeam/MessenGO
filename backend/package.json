@@ -12,6 +12,7 @@
     "dev:user": "cd services/user-service && npm run dev",
     "dev:chat": "cd services/chat-service && npm run dev",
     "dev:msg": "cd services/message-service && npm run dev",
+    "seed": "node scripts/seed.js",
     "test": "node tests/sprint1_auth_user.test.js",
     "test:sprint2": "node tests/sprint2_contact_chat.test.js",
     "test:sprint2:msg": "node tests/sprint2_message_ws.test.js"
