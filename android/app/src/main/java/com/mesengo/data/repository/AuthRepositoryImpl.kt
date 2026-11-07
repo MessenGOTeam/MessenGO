@@ -27,6 +27,7 @@ class AuthRepositoryImpl @Inject constructor(
 ) : AuthRepository {
 
     override suspend fun requestOtp(phone: String): Result<String> {
+        tokenManager.savePhone(phone)
         return try {
             val response = authApi.requestOtp(OtpRequestDto(phone = phone))
             if (response.isSuccessful) {
@@ -71,7 +72,8 @@ class AuthRepositoryImpl @Inject constructor(
                 tokenManager.saveTokens(
                     accessToken = body.accessToken,
                     refreshToken = body.refreshToken,
-                    userId = body.userId
+                    userId = body.userId,
+                    phone = phone
                 )
                 Result.success(body)
             } else {
@@ -91,7 +93,8 @@ class AuthRepositoryImpl @Inject constructor(
                 tokenManager.saveTokens(
                     accessToken = mockResponse.accessToken,
                     refreshToken = mockResponse.refreshToken,
-                    userId = mockResponse.userId
+                    userId = mockResponse.userId,
+                    phone = phone
                 )
                 Result.success(mockResponse)
             } else {
