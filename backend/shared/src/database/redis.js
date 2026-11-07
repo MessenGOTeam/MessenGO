@@ -9,8 +9,17 @@ let redisClient = null;
  */
 function getRedisClient() {
   if (!redisClient) {
+    let host = config.redis.host;
+    if (host === 'redis') {
+      try {
+        require('dns').lookup('redis', (err) => {
+          // handled
+        });
+      } catch (e) {}
+    }
+
     redisClient = new Redis({
-      host: config.redis.host,
+      host: process.env.REDIS_HOST_LOCAL || (config.redis.host === 'redis' ? '127.0.0.1' : config.redis.host),
       port: config.redis.port,
       lazyConnect: true,
       maxRetriesPerRequest: 1,

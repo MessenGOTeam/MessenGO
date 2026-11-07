@@ -117,7 +117,111 @@ services:
     networks:
       - messengo-net
 
-  # 6. Nginx API Gateway & Reverse Proxy
+  # 6. Auth Service (Port 3001)
+  auth-service:
+    build:
+      context: ./backend
+      dockerfile: services/auth-service/Dockerfile
+    container_name: messengo-auth-service
+    restart: unless-stopped
+    ports:
+      - "${AUTH_SERVICE_PORT:-3001}:3001"
+    environment:
+      - NODE_ENV=development
+      - PORT=3001
+      - AUTH_SERVICE_PORT=3001
+      - USER_SERVICE_INTERNAL_URL=http://user-service:3002
+      - MONGO_HOST=mongodb
+      - MONGO_URI=mongodb://${MONGO_ROOT_USER:-admin}:${MONGO_ROOT_PASSWORD:-messengo_admin_pass}@mongodb:27017
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - SMTP_HOST=mailhog
+      - SMTP_PORT=1025
+      - JWT_ACCESS_SECRET=${JWT_ACCESS_SECRET:-messengo_access_jwt_super_secret_key_2026}
+      - JWT_REFRESH_SECRET=${JWT_REFRESH_SECRET:-messengo_refresh_jwt_super_secret_key_2026}
+      - OTP_MOCK_ENABLED=${OTP_MOCK_ENABLED:-true}
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - messengo-net
+
+  # 7. User & Identity Service (Port 3002)
+  user-service:
+    build:
+      context: ./backend
+      dockerfile: services/user-service/Dockerfile
+    container_name: messengo-user-service
+    restart: unless-stopped
+    ports:
+      - "${USER_SERVICE_PORT:-3002}:3002"
+    environment:
+      - NODE_ENV=development
+      - PORT=3002
+      - USER_SERVICE_PORT=3002
+      - MONGO_HOST=mongodb
+      - MONGO_URI=mongodb://${MONGO_ROOT_USER:-admin}:${MONGO_ROOT_PASSWORD:-messengo_admin_pass}@mongodb:27017
+      - JWT_ACCESS_SECRET=${JWT_ACCESS_SECRET:-messengo_access_jwt_super_secret_key_2026}
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    networks:
+      - messengo-net
+
+  # 8. Chat & Conversation Service (Port 3003)
+  chat-service:
+    build:
+      context: ./backend
+      dockerfile: services/chat-service/Dockerfile
+    container_name: messengo-chat-service
+    restart: unless-stopped
+    ports:
+      - "${CHAT_SERVICE_PORT:-3003}:3003"
+    environment:
+      - NODE_ENV=development
+      - PORT=3003
+      - CHAT_SERVICE_PORT=3003
+      - USER_SERVICE_INTERNAL_URL=http://user-service:3002
+      - MONGO_HOST=mongodb
+      - MONGO_URI=mongodb://${MONGO_ROOT_USER:-admin}:${MONGO_ROOT_PASSWORD:-messengo_admin_pass}@mongodb:27017
+      - JWT_ACCESS_SECRET=${JWT_ACCESS_SECRET:-messengo_access_jwt_super_secret_key_2026}
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      user-service:
+        condition: service_started
+    networks:
+      - messengo-net
+
+  # 9. Message & WebSocket Service (Port 3004)
+  message-service:
+    build:
+      context: ./backend
+      dockerfile: services/message-service/Dockerfile
+    container_name: messengo-message-service
+    restart: unless-stopped
+    ports:
+      - "${MESSAGE_SERVICE_PORT:-3004}:3004"
+    environment:
+      - NODE_ENV=development
+      - PORT=3004
+      - MESSAGE_SERVICE_PORT=3004
+      - MONGO_HOST=mongodb
+      - MONGO_URI=mongodb://${MONGO_ROOT_USER:-admin}:${MONGO_ROOT_PASSWORD:-messengo_admin_pass}@mongodb:27017
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - JWT_ACCESS_SECRET=${JWT_ACCESS_SECRET:-messengo_access_jwt_super_secret_key_2026}
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - messengo-net
+
+  # 10. Nginx API Gateway & Reverse Proxy (Port 80)
   gateway:
     image: nginx:1.25-alpine
     container_name: messengo-gateway
@@ -142,7 +246,13 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-      minio:
+      auth-service:
+        condition: service_started
+      user-service:
+        condition: service_started
+      chat-service:
+        condition: service_started
+      message-service:
         condition: service_started
     networks:
       - messengo-net

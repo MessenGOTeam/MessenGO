@@ -20,7 +20,7 @@ server {
     }
 
     # Auth Service
-    location /api/v1/auth/ {
+    location /api/v1/auth {
         set $auth_backend "http://auth-service:${AUTH_SERVICE_PORT}";
         proxy_pass $auth_backend;
         proxy_set_header Host $host;
@@ -30,7 +30,7 @@ server {
     }
 
     # User & Identity Service
-    location /api/v1/users/ {
+    location /api/v1/users {
         set $user_backend "http://user-service:${USER_SERVICE_PORT}";
         proxy_pass $user_backend;
         proxy_set_header Host $host;
@@ -40,7 +40,17 @@ server {
     }
 
     # Chat / Conversation Service (HTTP)
-    location /api/v1/chats/ {
+    location /api/v1/chats {
+        set $chat_backend "http://chat-service:${CHAT_SERVICE_PORT}";
+        proxy_pass $chat_backend;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    # Contacts Management Service (HTTP)
+    location /api/v1/contacts {
         set $chat_backend "http://chat-service:${CHAT_SERVICE_PORT}";
         proxy_pass $chat_backend;
         proxy_set_header Host $host;
@@ -78,7 +88,7 @@ server {
     }
 
     # Media Service
-    location /api/v1/media/ {
+    location /api/v1/media {
         set $media_backend "http://media-service:${MEDIA_SERVICE_PORT}";
         proxy_pass $media_backend;
         proxy_set_header Host $host;
@@ -88,7 +98,7 @@ server {
     }
 
     # Utility Service (Backup / Cloud Storage)
-    location /api/v1/utility/ {
+    location /api/v1/utility {
         set $utility_backend "http://utility-service:${UTILITY_SERVICE_PORT}";
         proxy_pass $utility_backend;
         proxy_set_header Host $host;
@@ -98,7 +108,7 @@ server {
     }
 
     # Search Service
-    location /api/v1/search/ {
+    location /api/v1/search {
         set $search_backend "http://search-service:${SEARCH_SERVICE_PORT}";
         proxy_pass $search_backend;
         proxy_set_header Host $host;
@@ -108,7 +118,7 @@ server {
     }
 
     # Notification Service (FCM Push Notifications)
-    location /api/v1/notifications/ {
+    location /api/v1/notifications {
         set $notification_backend "http://notification-service:${NOTIFICATION_SERVICE_PORT}";
         proxy_pass $notification_backend;
         proxy_set_header Host $host;

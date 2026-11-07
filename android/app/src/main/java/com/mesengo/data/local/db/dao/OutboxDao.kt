@@ -12,9 +12,18 @@ interface OutboxDao {
     @Query("SELECT * FROM outbox ORDER BY createdAt ASC")
     fun getPendingOutbox(): Flow<List<OutboxEntity>>
 
+    @Query("SELECT * FROM outbox ORDER BY createdAt ASC")
+    suspend fun getPendingOutboxList(): List<OutboxEntity>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertOutbox(outbox: OutboxEntity)
 
     @Query("DELETE FROM outbox WHERE clientMsgId = :clientMsgId")
     suspend fun deleteOutbox(clientMsgId: String)
+
+    @Query("UPDATE outbox SET retryCount = retryCount + 1 WHERE clientMsgId = :clientMsgId")
+    suspend fun incrementRetryCount(clientMsgId: String)
+
+    @Query("SELECT COUNT(*) FROM outbox")
+    suspend fun getOutboxCount(): Int
 }
