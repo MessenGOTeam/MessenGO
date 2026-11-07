@@ -9,8 +9,27 @@ const config = require('../config');
  */
 async function connectMongo(dbName) {
   try {
-    const baseUri = config.mongo.uri.replace(/\/[^/?]+(\?|$)/, '/');
-    const uri = `${baseUri.replace(/\/$/, '')}/${dbName}?authSource=admin`;
+    let rawUri = config.mongo.uri;
+    if (rawUri.includes('@mongodb:')) {
+      try {
+        const dns = require('dns');
+        await dns.promises.lookup('mongodb');
+      } catch {
+        rawUri = rawUri.replace('@mongodb:', '@localhost:');
+      }
+    }
+
+    let uri;
+    try {
+      const parsedUrl = new URL(rawUri);
+      parsedUrl.pathname = `/${dbName}`;
+      parsedUrl.searchParams.set('authSource', 'admin');
+      uri = parsedUrl.toString();
+    } catch {
+      const questionIdx = rawUri.indexOf('?');
+      const base = questionIdx === -1 ? rawUri : rawUri.slice(0, questionIdx);
+      uri = `${base.replace(/\/+$/, '')}/${dbName}?authSource=admin`;
+    }
 
     const conn = await mongoose.connect(uri, {
       serverSelectionTimeoutMS: 5000

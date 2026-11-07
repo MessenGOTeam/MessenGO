@@ -1,7 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const userRoutes = require('./routes/user.routes');
-const { errorHandler } = require('../../shared');
+const { errorHandler } = require('../../../shared');
 
 const app = express();
 

@@ -10,6 +10,8 @@
   "scripts": {
     "dev:auth": "cd services/auth-service && npm run dev",
     "dev:user": "cd services/user-service && npm run dev",
-    "test": "node tests/sprint1_auth_user.test.js"
+    "dev:chat": "cd services/chat-service && npm run dev",
+    "test": "node tests/sprint1_auth_user.test.js",
+    "test:sprint2": "node tests/sprint2_contact_chat.test.js"
   }
 }
