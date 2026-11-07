@@ -1,5 +1,6 @@
 const User = require('../models/User');
 const Device = require('../models/Device');
+const Contact = require('../models/Contact');
 const { sendSuccess, sendError, isValidE164 } = require('../../../../shared');
 
 /**
@@ -108,6 +109,7 @@ async function updateProfile(req, res, next) {
 
 /**
  * Search user by exact phone number (FR-CON-01).
+ * If target has blocked requester (with any block type), target is invisible (returns 404).
  */
 async function searchByPhone(req, res, next) {
   try {
@@ -122,6 +124,74 @@ async function searchByPhone(req, res, next) {
 
     if (!user) {
       return sendError(res, 'User not found', 404, { code: 'USER_NOT_FOUND' });
+    }
+
+    const requesterId = req.user ? req.user.userId : null;
+    const targetUserId = user._id.toString();
+
+    // Prevent searching oneself
+    if (requesterId && (requesterId === targetUserId || (req.user.phone && req.user.phone === user.phone))) {
+      return sendSuccess(res, { user: user.toJSON(), relationship: { status: 'self', isSelf: true } }, 'User found');
+    }
+
+    if (requesterId) {
+      // RULE: If target has blocked requester with ANY blockType (messages_only, messages_and_calls, all):
+      // Target is completely invisible to requester!
+      const targetBlockedRequester = await Contact.findOne({
+        ownerId: targetUserId,
+        contactUserId: requesterId,
+        status: 'blocked'
+      });
+
+      if (targetBlockedRequester) {
+        return sendError(res, 'User not found', 404, { code: 'USER_NOT_FOUND' });
+      }
+
+      // Check if requester has blocked target
+      const requesterBlockedTarget = await Contact.findOne({
+        ownerId: requesterId,
+        contactUserId: targetUserId,
+        status: 'blocked'
+      });
+
+      // Check existing friendship or requests
+      const myContact = await Contact.findOne({
+        ownerId: requesterId,
+        contactUserId: targetUserId
+      });
+
+      const incomingRequest = await Contact.findOne({
+        ownerId: targetUserId,
+        contactUserId: requesterId,
+        status: 'pending'
+      });
+
+      let status = 'none';
+      if (requesterBlockedTarget) {
+        status = 'blocked';
+      } else if (myContact?.status === 'accepted') {
+        status = 'accepted';
+      } else if (myContact?.status === 'pending') {
+        status = 'pending_sent';
+      } else if (incomingRequest) {
+        status = 'pending_received';
+      }
+
+      return sendSuccess(
+        res,
+        {
+          user: user.toJSON(),
+          relationship: {
+            status,
+            isBlockedByMe: !!requesterBlockedTarget,
+            blockType: requesterBlockedTarget?.blockType || null,
+            hasIncomingRequest: !!incomingRequest,
+            incomingRequestId: incomingRequest?.id || null,
+            incomingRequestMessage: incomingRequest?.message || null
+          }
+        },
+        'User found'
+      );
     }
 
     return sendSuccess(res, { user: user.toJSON() }, 'User found');

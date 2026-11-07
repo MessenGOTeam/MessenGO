@@ -24,6 +24,16 @@ const contactSchema = new mongoose.Schema(
       enum: ['pending', 'accepted', 'rejected', 'blocked'],
       default: 'pending',
       index: true
+    },
+    blockType: {
+      type: String,
+      enum: ['messages_only', 'messages_and_calls', 'all', null],
+      default: null,
+      index: true
+    },
+    blockedAt: {
+      type: Date,
+      default: null
     }
   },
   {
@@ -41,4 +51,4 @@ const contactSchema = new mongoose.Schema(
 
 contactSchema.index({ ownerId: 1, contactUserId: 1 }, { unique: true });
 
-module.exports = mongoose.model('Contact', contactSchema, 'contacts');
+module.exports = mongoose.models.Contact || mongoose.model('Contact', contactSchema, 'contacts');
