@@ -4,6 +4,8 @@ const app = require('../services/chat-service/src/app');
 const userApp = require('../services/user-service/src/app');
 const Contact = require('../services/chat-service/src/models/Contact');
 const User = require('../services/chat-service/src/models/User');
+const Conversation = require('../services/chat-service/src/models/Conversation');
+const Message = require('../services/chat-service/src/models/Message');
 const { signAccessToken, connectMongo, mongoose } = require('../shared');
 
 function makeRequest(server, options, body = null) {
@@ -94,12 +96,18 @@ async function runSprint2ContactTests() {
   const idC = userC.id;
   const idD = userD.id;
 
-  // Clear previous test contacts
+  // Clear previous test contacts and conversations
   await Contact.deleteMany({
     $or: [
       { ownerId: { $in: [idA, idB, idC, idD] } },
       { contactUserId: { $in: [idA, idB, idC, idD] } }
     ]
+  });
+  await Conversation.deleteMany({
+    members: { $in: [idA, idB, idC, idD] }
+  });
+  await Message.deleteMany({
+    senderId: { $in: [idA, idB, idC, idD] }
   });
 
   const tokenA = signAccessToken({ userId: idA, phone: userA.phone, roles: ['user'] });
@@ -389,10 +397,155 @@ async function runSprint2ContactTests() {
   assert.strictEqual(listFriends.statusCode, 200);
   assert.strictEqual(listFriends.data.data.type, 'friends');
   assert.strictEqual(listFriends.data.data.count, 1);
-  console.log('   ✓ /contacts?type=friends returned correct count (200 OK).');
+  console.log('   ✓ /contacts?type=friends returned correct count (200 OK).\n');
+
+  // --- SPRINT 2 CONVERSATION TESTS ---
+
+  // Test 14: Create 1-1 conversation WITHOUT initial message (PairKey generation, hasMessages = false)
+  console.log('14. Testing Create 1-1 Conversation Without Initial Message (pairKey unique, hasMessages = false):');
+  const expectedPairKey = [idC, idD].sort().join('_');
+  const emptyChatRes = await makeRequest(
+    server,
+    {
+      path: '/api/v1/chats',
+      method: 'POST',
+      headers: { Authorization: `Bearer ${tokenC}` }
+    },
+    { peerId: idD }
+  );
+  assert.strictEqual(emptyChatRes.statusCode, 201);
+  assert.strictEqual(emptyChatRes.data.success, true);
+  assert.strictEqual(emptyChatRes.data.data.chat.pairKey, expectedPairKey);
+  assert.strictEqual(emptyChatRes.data.data.chat.hasMessages, false);
+  assert.strictEqual(emptyChatRes.data.data.chat.lastMessage, null);
+  const convId = emptyChatRes.data.data.chat.id;
+  console.log(`   ✓ Conversation initialized with unique pairKey: ${expectedPairKey}, hasMessages: false.`);
+
+  // Test 15: Ensure Empty Conversation Does NOT appear in GET /api/v1/chats
+  console.log('15. Testing Empty Chat Prevention in GET /api/v1/chats (Zombie room filter):');
+  const listChatsEmpty = await makeRequest(
+    server,
+    {
+      path: '/api/v1/chats',
+      method: 'GET',
+      headers: { Authorization: `Bearer ${tokenC}` }
+    }
+  );
+  assert.strictEqual(listChatsEmpty.statusCode, 200);
+  assert.strictEqual(listChatsEmpty.data.data.count, 0, 'Empty room must NOT appear in chat list');
+  console.log('   ✓ Empty conversation is filtered out (0 empty rooms in chat list).');
+
+  // Test 16: Create / Activate 1-1 Conversation with Initial Message
+  console.log('16. Testing Send Initial Message to 1-1 Conversation:');
+  const initMsgRes = await makeRequest(
+    server,
+    {
+      path: '/api/v1/chats',
+      method: 'POST',
+      headers: { Authorization: `Bearer ${tokenC}` }
+    },
+    {
+      peerId: idD,
+      initialMessage: 'Chào bạn D, mình là C đây!'
+    }
+  );
+  assert.strictEqual(initMsgRes.statusCode, 200);
+  assert.strictEqual(initMsgRes.data.data.chat.hasMessages, true);
+  assert.strictEqual(initMsgRes.data.data.chat.lastSeq, 1);
+  assert.strictEqual(initMsgRes.data.data.chat.lastMessage.text, 'Chào bạn D, mình là C đây!');
+  assert.strictEqual(initMsgRes.data.data.chat.lastMessage.senderId, idC);
+  console.log('   ✓ First message sent, conversation marked hasMessages = true, seq = 1.');
+
+  // Test 17: Active conversation now appears in GET /api/v1/chats
+  console.log('17. Testing Active Conversation Retrieval in GET /api/v1/chats:');
+  // For User C (sender): unreadCount = 0
+  const listChatsC = await makeRequest(
+    server,
+    {
+      path: '/api/v1/chats',
+      method: 'GET',
+      headers: { Authorization: `Bearer ${tokenC}` }
+    }
+  );
+  assert.strictEqual(listChatsC.statusCode, 200);
+  assert.strictEqual(listChatsC.data.data.count, 1);
+  assert.strictEqual(listChatsC.data.data.chats[0].peer.userId, idD);
+  assert.strictEqual(listChatsC.data.data.chats[0].unreadCount, 0);
+
+  // For User D (recipient): unreadCount = 1
+  const listChatsD = await makeRequest(
+    server,
+    {
+      path: '/api/v1/chats',
+      method: 'GET',
+      headers: { Authorization: `Bearer ${tokenD}` }
+    }
+  );
+  assert.strictEqual(listChatsD.statusCode, 200);
+  assert.strictEqual(listChatsD.data.data.count, 1);
+  assert.strictEqual(listChatsD.data.data.chats[0].peer.userId, idC);
+  assert.strictEqual(listChatsD.data.data.chats[0].unreadCount, 1);
+  console.log('   ✓ Conversation visible for both members with correct peer info and unreadCount.');
+
+  // Test 18: Send reply via POST /api/v1/chats/:chatId/messages
+  console.log('18. Testing Reply Message via POST /api/v1/chats/:chatId/messages:');
+  const replyRes = await makeRequest(
+    server,
+    {
+      path: `/api/v1/chats/${convId}/messages`,
+      method: 'POST',
+      headers: { Authorization: `Bearer ${tokenD}` }
+    },
+    {
+      content: 'Chào C, mình nhận được tin nhắn rồi!',
+      clientMsgId: 'c_reply_test_001'
+    }
+  );
+  assert.strictEqual(replyRes.statusCode, 201);
+  assert.strictEqual(replyRes.data.data.seq, 2);
+  assert.strictEqual(replyRes.data.data.message.content, 'Chào C, mình nhận được tin nhắn rồi!');
+  console.log('   ✓ Reply message sent, seq incremented to 2.');
+
+  // Test 19: Idempotent message deduplication by clientMsgId
+  console.log('19. Testing Idempotent Message Deduplication:');
+  const dupMsgRes = await makeRequest(
+    server,
+    {
+      path: `/api/v1/chats/${convId}/messages`,
+      method: 'POST',
+      headers: { Authorization: `Bearer ${tokenD}` }
+    },
+    {
+      content: 'Chào C, mình nhận được tin nhắn rồi!',
+      clientMsgId: 'c_reply_test_001'
+    }
+  );
+  assert.strictEqual(dupMsgRes.statusCode, 200);
+  assert.strictEqual(dupMsgRes.data.data.isDuplicate, true);
+  assert.strictEqual(dupMsgRes.data.data.message.seq, 2);
+  console.log('   ✓ Duplicate clientMsgId deduplicated without seq increment.');
+
+  // Test 20: Mark as Read (POST /api/v1/chats/read)
+  console.log('20. Testing Mark As Read (lastReadSeq = 2):');
+  const markReadRes = await makeRequest(
+    server,
+    {
+      path: '/api/v1/chats/read',
+      method: 'POST',
+      headers: { Authorization: `Bearer ${tokenC}` }
+    },
+    {
+      convId,
+      lastReadSeq: 2
+    }
+  );
+  assert.strictEqual(markReadRes.statusCode, 200);
+  assert.strictEqual(markReadRes.data.data.unreadCount, 0);
+  assert.strictEqual(markReadRes.data.data.lastReadSeq, 2);
+  console.log('   ✓ Read receipt updated, unreadCount reset to 0 (200 OK).');
 
   console.log('\n======================================================');
-  console.log('🎉 ALL SPRINT 2 CONTACT & BLOCK TESTS PASSED (13/13)!');
+  console.log('🎉 ALL SPRINT 2 CONTACT & CHAT TESTS PASSED (20/20)!');
   console.log('======================================================\n');
 
   server.close();
